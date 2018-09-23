@@ -14,6 +14,7 @@
 #include <sstream>
 #include <string>
 #include <iterator>
+#include <limits>
 
 #include "particle_filter.h"
 
@@ -79,7 +80,16 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 	//   observed measurement to this particular landmark.
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
 	//   implement this method and use it as a helper during the updateWeights phase.
-
+	for(LandmarkObs& predicted_ob: predicted){
+		double min_distance = numeric_limits<double>::max();
+		for(const LandmarkObs& ob : observations){
+			double distance = dist(predicted_ob.x, predicted_ob.y, ob.x, ob.y);
+			if(distance <= min_distance){
+				min_distance = distance;
+				predicted_ob.id = ob.id;
+			}
+		}
+	}
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
