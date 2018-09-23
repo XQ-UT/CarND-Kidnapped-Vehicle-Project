@@ -15,6 +15,7 @@
 #include <string>
 #include <iterator>
 #include <limits>
+#include <unordered_map>
 
 #include "particle_filter.h"
 
@@ -80,13 +81,13 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 	//   observed measurement to this particular landmark.
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
 	//   implement this method and use it as a helper during the updateWeights phase.
-	for(LandmarkObs& predicted_ob: predicted){
+	for(const LandmarkObs& predicted_ob: predicted){
 		double min_distance = numeric_limits<double>::max();
-		for(const LandmarkObs& ob : observations){
+		for(LandmarkObs& ob : observations){
 			double distance = dist(predicted_ob.x, predicted_ob.y, ob.x, ob.y);
 			if(distance <= min_distance){
 				min_distance = distance;
-				predicted_ob.id = ob.id;
+				ob.id = predicted_ob.id;
 			}
 		}
 	}
@@ -104,6 +105,54 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   and the following is a good resource for the actual equation to implement (look at equation 
 	//   3.33
 	//   http://planning.cs.uiuc.edu/node99.html
+
+	double std_x = std_landmark[0];
+	double std_y = std_landmark[1];
+
+	for(Particle& p : particles){
+		double x = p.x;
+		double y = p.y;
+		double theta = p.theta;
+
+		// convert observation from vehicle coordicates to map coordinates system.
+		std::vector<LandmarkObs> converted_observations;
+		for(const LandmarkObs& ob : observations){
+			LandmarkObs converted_ob;
+			converted_ob.id = ob.id;
+			converted_ob.x = x + ob.x * cos(theta) - ob.y * sin(theta);
+			converted_ob.y = y + ob.x * sin(theta) + ob.y * cos(theta);
+			converted_observations.push_back(std::move(converted_ob));
+		}
+
+		// fetch in-range landmarks from map.
+		std::vector<LandmarkObs> predicted_landmarks;
+		std::unordered_map<int, LandmarkObs> id_to_landmark;
+		for(const Map::single_landmark_s& landmark: map_landmarks.landmark_list){
+			if(dist(x, y, landmark.x_f, landmark.y_f) >= sensor_range){
+				continue;
+			}
+
+			LandmarkObs inrange_landmark;
+			inrange_landmark.id = landmark.id_i;
+			inrange_landmark.x = landmark.x_f;
+			inrange_landmark.y = landmark.y_f;
+			predicted_landmarks.push_back(inrange_landmark);
+			id_to_landmark[inrange_landmark.id] = inrange_landmark;
+		}
+
+		dataAssociation(predicted_landmarks, converted_observations);
+		
+		double new_weight = 1.0;
+		for(const LandmarkObs& c_ob :converted_observations){
+			LandmarkObs& p_ob = id_to_landmark[c_ob.id];
+			double index = 	pow(p_ob.x - c_ob.x, 2) / (2 * std_x * std_x) +
+							pow(p_ob.y - c_ob.y, 2) / (2 * std_y * std_y);
+			double prob = exp(-index) / (2 * M_PI * std_x * std_y);
+			new_weight *= prob;
+		}
+
+		p.weight = new_weight;
+	}		
 }
 
 void ParticleFilter::resample() {
@@ -111,6 +160,9 @@ void ParticleFilter::resample() {
 	// NOTE: You may find std::discrete_distribution helpful here.
 	//   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
 
+	for(int i = 0; i < num_particles; ++i){
+
+	}
 }
 
 Particle ParticleFilter::SetAssociations(Particle& particle, const std::vector<int>& associations, 
