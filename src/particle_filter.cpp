@@ -40,7 +40,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 		p.y = dist_y(gen);
 		p.theta = dist_theta(gen);
 		p.weight = 1.0;
-		
+
 		particles.push_back(p);
 		weights.push_back(1.0);
 	}
@@ -54,6 +54,24 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	//  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
 	//  http://www.cplusplus.com/reference/random/default_random_engine/
 
+	double std_x = std_pos[0];
+	double std_y = std_pos[1];
+	double std_theta = std_pos[2];
+	default_random_engine gen;
+
+	for(Particle& p : particles){
+		p.x += velocity * (sin(p.theta + yaw_rate * delta_t) - sin(p.theta)) / p.theta;
+		p.y += velocity * (cos(p.theta) - cos(p.theta + yaw_rate * delta_t)) / p.theta;
+		p.theta += yaw_rate * delta_t;
+
+		normal_distribution<double> dist_x(p.x, std_x);
+		normal_distribution<double> dist_y(p.y, std_y);
+		normal_distribution<double> dist_theta(p.theta, std_theta);
+		
+		p.x = dist_x(gen);
+		p.y = dist_y(gen);
+		p.theta = dist_theta(gen);
+	}
 }
 
 void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::vector<LandmarkObs>& observations) {
