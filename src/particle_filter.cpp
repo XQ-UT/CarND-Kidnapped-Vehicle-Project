@@ -35,6 +35,9 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	normal_distribution<double> dist_y(y, std_y);
 	normal_distribution<double> dist_theta(theta, std_theta);
 	
+	// Set the number of particles 
+	num_particles = 10;
+
 	for(int i = 0; i < num_particles; ++i){
 		Particle p;
 		p.id = i;
@@ -160,7 +163,11 @@ void ParticleFilter::resample() {
 	// TODO: Resample particles with replacement with probability proportional to their weight. 
 	// NOTE: You may find std::discrete_distribution helpful here.
 	//   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
-
+		
+	cout << weights.size() << endl;
+	for(double w : weights){
+		cout << w << endl;
+	}
 	double max_weight = *std::max_element(weights.begin(), weights.end());
 	std::discrete_distribution<int> d_index(0, num_particles);
 	std::discrete_distribution<double> d_prob(0.0, 2 * max_weight);
