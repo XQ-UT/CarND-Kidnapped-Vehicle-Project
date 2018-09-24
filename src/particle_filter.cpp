@@ -65,9 +65,15 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	default_random_engine gen;
 
 	for(Particle& p : particles){
-		p.x += velocity * (sin(p.theta + yaw_rate * delta_t) - sin(p.theta)) / yaw_rate;
-		p.y += velocity * (cos(p.theta) - cos(p.theta + yaw_rate * delta_t)) / yaw_rate;
-		p.theta += yaw_rate * delta_t;
+		if( yaw_rate == 0.0){
+			// deal the case when yaw_rate is zero.
+			p.x += velocity * delta_t * cos(p.theta);
+			p.y += velocity * delta_t * sin(p.theta);
+		}else{
+			p.x += velocity * (sin(p.theta + yaw_rate * delta_t) - sin(p.theta)) / yaw_rate;
+			p.y += velocity * (cos(p.theta) - cos(p.theta + yaw_rate * delta_t)) / yaw_rate;
+			p.theta += yaw_rate * delta_t;
+		}
 
 		normal_distribution<double> dist_x(p.x, std_x);
 		normal_distribution<double> dist_y(p.y, std_y);
@@ -172,6 +178,7 @@ void ParticleFilter::resample() {
 	double beta = 0.0;
 	std::vector<Particle> new_particles;
 	std::vector<double> new_weights;
+
 	for(int i = 0; i < num_particles; ++i){
 		beta += d_prob(gen);
 		while(weights[index] < beta){
